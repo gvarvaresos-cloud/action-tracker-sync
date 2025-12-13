@@ -1,0 +1,1546 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Action Tracker - Sync</title>
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#0f1a2d; --panel2:#0c1628;
+      --text:#e7edf7; --muted:#9fb0c8; --border:#243552;
+      --shadow: 0 10px 30px rgba(0,0,0,.25);
+      --accent:#19c37d;
+      --todo:#f59e0b; --prog:#3b82f6; --done:#22c55e;
+      --danger:#ef4444; --warn:#f59e0b;
+      --input:#0b1528; --chip:#12213a;
+      --brand1:#0ea5e9; --brand2:#22c55e;
+    }
+    [data-theme="light"]{
+      --bg:#f6f8fc; --panel:#ffffff; --panel2:#ffffff;
+      --text:#0f172a; --muted:#475569; --border:#dbe3f0;
+      --shadow: 0 10px 30px rgba(2,6,23,.08);
+      --input:#f3f6fb; --chip:#eef2ff;
+      --brand1:#0ea5e9; --brand2:#16a34a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans";
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(14,165,233,.12), transparent 55%),
+                  radial-gradient(1000px 500px at 80% 0%, rgba(34,197,94,.10), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      backdrop-filter: blur(10px);
+      background: color-mix(in srgb, var(--bg) 85%, transparent);
+      border-bottom:1px solid var(--border);
+    }
+    .wrap{max-width:1200px;margin:0 auto;padding:16px}
+    .topbar{display:flex; gap:12px; align-items:center; justify-content:space-between;}
+    .brand{display:flex; align-items:center; gap:12px;}
+    .logo{
+      width:42px;height:42px;border-radius:14px;
+      background: linear-gradient(135deg,var(--brand1),var(--brand2));
+      box-shadow: var(--shadow);
+    }
+    .brand h1{font-size:16px; margin:0; line-height:1.2;}
+    .brand p{margin:0;font-size:12px;color:var(--muted)}
+    .actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+
+    .btn{
+      border:1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      transition: transform .06s ease, border-color .15s ease, background .15s ease;
+      font-weight:700;
+      font-size:13px;
+    }
+    .btn:hover{border-color: color-mix(in srgb, var(--border) 55%, var(--accent))}
+    .btn:active{transform: translateY(1px)}
+    .btn.primary{
+      border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+      background: color-mix(in srgb, var(--accent) 20%, var(--panel));
+    }
+    .btn.danger{
+      border-color: color-mix(in srgb, var(--danger) 60%, var(--border));
+      background: color-mix(in srgb, var(--danger) 14%, var(--panel));
+    }
+    .btn.tight{padding:8px 10px;border-radius:10px;font-size:12px}
+    .btn.disabled{opacity:.55; cursor:not-allowed;}
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:14px;
+      margin-top:14px;
+    }
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr} }
+
+    .card{
+      background: var(--panel);
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:14px 14px 12px;
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, transparent), var(--panel));
+    }
+    .card .hd h2{margin:0;font-size:14px}
+    .card .bd{padding:14px}
+
+    .tabs{display:flex; gap:8px; flex-wrap:wrap;}
+    .tab{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 90%, transparent);
+      cursor:pointer;
+      font-weight:800;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .tab.active{
+      color:var(--text);
+      border-color: color-mix(in srgb, var(--border) 50%, var(--accent));
+      background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+    }
+
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .row > *{flex:1}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    input, select, textarea{
+      width:100%;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      outline:none;
+      background: var(--input);
+      color:var(--text);
+      font-size:13px;
+    }
+    textarea{min-height:88px; resize:vertical}
+    select[multiple]{min-height:88px;padding:10px}
+
+    .switch{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 90%, transparent);
+      user-select:none;
+    }
+    .switch input{width:18px;height:18px}
+    .switch span{font-size:13px;color:var(--text);font-weight:800}
+
+    .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
+    .small{font-size:12px;color:var(--muted)}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:8px 10px;
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      font-size:12px;
+      font-weight:900;
+      color:var(--text);
+      white-space:nowrap;
+    }
+
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      border:1px solid var(--border);
+      border-radius:16px;
+      overflow:hidden;
+    }
+    thead th{
+      text-align:left;
+      font-size:12px;
+      padding:10px 10px;
+      color:var(--muted);
+      border-bottom:1px solid var(--border);
+      background: color-mix(in srgb, var(--panel2) 92%, transparent);
+      position:sticky; top:0;
+      z-index:2;
+    }
+    tbody td{
+      padding:10px 10px;
+      border-bottom:1px solid var(--border);
+      font-size:13px;
+      vertical-align:top;
+    }
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background: color-mix(in srgb, var(--accent) 6%, transparent);}
+
+    .row-critical td{
+      box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--danger) 55%, transparent);
+      background: color-mix(in srgb, var(--danger) 8%, transparent);
+    }
+
+    .status{
+      display:inline-flex; align-items:center; gap:8px;
+      font-weight:900;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      font-size:12px;
+      white-space:nowrap;
+      cursor:pointer;
+      user-select:none;
+    }
+    .dot{width:10px;height:10px;border-radius:999px; display:inline-block}
+    .st-todo .dot{background:var(--todo)}
+    .st-prog .dot{background:var(--prog)}
+    .st-done .dot{background:var(--done)}
+    .st-todo{border-color: color-mix(in srgb, var(--todo) 55%, var(--border))}
+    .st-prog{border-color: color-mix(in srgb, var(--prog) 55%, var(--border))}
+    .st-done{border-color: color-mix(in srgb, var(--done) 55%, var(--border))}
+
+    .chips{display:flex; flex-wrap:wrap; gap:4px;}
+    .chip{
+      display:inline-flex; align-items:center; gap:4px;
+      padding:4px 8px; border-radius:999px;
+      border:1px solid var(--border);
+      background: var(--chip);
+      font-size:11px; font-weight:900;
+      color:var(--text); white-space:nowrap;
+    }
+    .chip .mini{width:8px; height:8px; border-radius:999px; display:inline-block;}
+
+    .cell-edit{padding:0}
+    .cell-edit input, .cell-edit select{
+      border-radius:10px;
+      padding:8px 8px;
+      width:100%;
+      font-size:13px;
+    }
+    .cell-edit select[multiple]{min-height:84px}
+
+    .iconbtn{
+      padding:6px 8px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      cursor:pointer;
+      font-weight:900;
+      font-size:11px;
+      line-height:1;
+      color:var(--text);
+      white-space:nowrap;
+    }
+    .iconbtn:hover{border-color: color-mix(in srgb, var(--border) 55%, var(--accent))}
+    .iconbtn.danger:hover{border-color: color-mix(in srgb, var(--danger) 55%, var(--border))}
+
+    .kpi{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:10px;
+      margin-top:10px;
+    }
+    .kpi .box{
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:12px;
+      background: color-mix(in srgb, var(--panel) 90%, transparent);
+    }
+    .kpi .n{font-size:18px;font-weight:900;margin:0}
+    .kpi .t{font-size:12px;color:var(--muted);margin:4px 0 0}
+
+    .toolbar{
+      display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+      padding:10px 14px;
+      border-bottom:1px solid var(--border);
+      background: color-mix(in srgb, var(--panel2) 92%, transparent);
+    }
+
+    .calbar{display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap;}
+    .calbar .left, .calbar .right{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .calgrid{margin-top:12px; display:grid; grid-template-columns: repeat(7, 1fr); gap:8px;}
+    .day, .wkday{
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:10px;
+      background: color-mix(in srgb, var(--panel) 90%, transparent);
+      min-height:98px;
+      cursor:pointer;
+      position:relative;
+      overflow:hidden;
+    }
+    .day .d{font-weight:900;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;}
+    .day .marks, .wkday .marks{display:flex; flex-direction:column; gap:6px; margin-top:8px}
+    .mark{
+      display:flex; align-items:center; gap:8px;
+      font-size:12px; font-weight:900;
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:5px 8px;
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .mark .m{width:10px;height:10px;border-radius:999px; display:inline-block;}
+    .mark.start .m{background: var(--brand1)}
+    .mark.end .m{background: var(--brand2)}
+    .day.dim{opacity:.6}
+    .day.today{
+      border-color: color-mix(in srgb, var(--accent) 70%, var(--border));
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+    }
+    .wkgrid{margin-top:12px; display:grid; grid-template-columns: repeat(7, 1fr); gap:8px;}
+    .wkday{min-height:140px;}
+    .wkday .h{display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--muted); font-size:12px; font-weight:900;}
+
+    .toast{
+      position:fixed; left:16px; bottom:16px; z-index:1000;
+      display:none; align-items:center; gap:10px;
+      padding:12px 12px; border-radius:14px;
+      border:1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      box-shadow: var(--shadow);
+      color:var(--text);
+    }
+    .toast .msg{font-weight:800;font-size:13px}
+    .toast .link{
+      border:1px solid var(--border);
+      background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+      color:var(--text);
+      padding:8px 10px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:900;
+      font-size:12px;
+    }
+    .banner{
+      margin-top:14px;
+      border:1px dashed color-mix(in srgb, var(--border) 60%, var(--accent));
+      border-radius:16px;
+      padding:12px 14px;
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+    }
+    footer{padding:18px 16px;text-align:center;color:var(--muted);font-size:12px;}
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Action Tracker (Sync)</h1>
+          <p>Cloud Firestore sync · Google login · πρόσβαση από παντού</p>
+        </div>
+      </div>
+      <div class="actions">
+        <div class="tabs" role="tablist" aria-label="Tabs">
+          <button class="tab active" id="tab-actions" role="tab" aria-selected="true">Actions</button>
+          <button class="tab" id="tab-calendar" role="tab" aria-selected="false">Calendar</button>
+          <button class="tab" id="tab-week" role="tab" aria-selected="false">Week</button>
+        </div>
+
+        <span class="pill" id="authPill">Not signed in</span>
+        <button class="btn tight primary" id="btnSignIn">Sign in</button>
+        <button class="btn tight" id="btnSignOut" style="display:none;">Sign out</button>
+
+        <label class="switch" title="Dark/Light mode">
+          <input type="checkbox" id="themeToggle" />
+          <span>Dark mode</span>
+        </label>
+        <button class="btn primary" id="btnExport">Export CSV</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="banner" id="setupBanner" style="display:none;">
+    <div>
+      <div style="font-weight:900;">Ρύθμιση Firebase απαιτείται</div>
+      <div class="small">Άνοιξε το αρχείο, βάλε το <strong>firebaseConfig</strong> (Project settings → Web app) και κάνε refresh.</div>
+    </div>
+  </div>
+
+  <div class="banner" id="signinBanner" style="display:none;">
+    <div>
+      <div style="font-weight:900;">Για sync από παντού</div>
+      <div class="small">Κάνε Sign in (Google) για να φορτωθούν/συγχρονιστούν τα tasks.</div>
+    </div>
+    <button class="btn tight primary" id="btnSignIn2">Sign in</button>
+  </div>
+
+  <section id="view-actions">
+    <div class="grid">
+      <div class="card">
+        <div class="hd">
+          <h2>Νέα ενέργεια</h2>
+          <div class="small">Τα tasks αποθηκεύονται στο cloud (ανά χρήστη)</div>
+        </div>
+        <div class="bd">
+          <div class="row">
+            <div>
+              <label>Τίτλος</label>
+              <input id="fTitle" placeholder="π.χ. Push για καμπάνια X" />
+            </div>
+            <div>
+              <label>Status</label>
+              <select id="fStatus">
+                <option>To Do</option>
+                <option>In Progress</option>
+                <option>Done</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div>
+              <label>Start date</label>
+              <input id="fStart" type="date" />
+            </div>
+            <div>
+              <label>End date</label>
+              <input id="fEnd" type="date" />
+            </div>
+            <div>
+              <label>Owner (προαιρετικό)</label>
+              <input id="fOwner" placeholder="π.χ. Giorgos / Team / Agency" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div>
+              <label>Tags (multi-select)</label>
+              <select id="fTags" multiple>
+                <option>Main Banner</option>
+                <option>Bottom Banner</option>
+                <option>NSL</option>
+                <option>Push</option>
+                <option>PopUp</option>
+                <option>Viber</option>
+                <option>Social Post</option>
+                <option>Social Ads</option>
+                <option>Google</option>
+              </select>
+              <div class="hint" id="softRuleHint" style="margin-top:6px;"></div>
+            </div>
+            <div>
+              <label>Deliverable (multi-select)</label>
+              <select id="fDeliverable" multiple>
+                <option>EASY</option>
+                <option>ACRO</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top:10px;">
+            <label>Περιγραφή Ενέργειας</label>
+            <textarea id="fDesc" placeholder="Τι ακριβώς, γιατί, πώς φαίνεται το 'done'..."></textarea>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <button class="btn primary tight" id="btnAdd">Add</button>
+            <div class="hint">Tip: click στο status pill στη λίστα για γρήγορη αλλαγή.</div>
+          </div>
+
+          <div class="kpi">
+            <div class="box">
+              <p class="n" id="kpiTotal">0</p>
+              <p class="t">Σύνολο</p>
+            </div>
+            <div class="box">
+              <p class="n" id="kpiOpen">0</p>
+              <p class="t">Ανοιχτές</p>
+            </div>
+            <div class="box">
+              <p class="n" id="kpiCritical">0</p>
+              <p class="t">Due soon (≤ 2 μέρες)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <h2>Φίλτρα</h2>
+          <div class="small">Smart default sorting</div>
+        </div>
+        <div class="bd">
+          <div>
+            <label>Search</label>
+            <input id="qSearch" placeholder="τίτλος, περιγραφή, tag..." />
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div>
+              <label>Status</label>
+              <select id="qStatus">
+                <option value="">All</option>
+                <option>To Do</option>
+                <option>In Progress</option>
+                <option>Done</option>
+              </select>
+            </div>
+            <div>
+              <label>Tag (contains)</label>
+              <input id="qTag" placeholder="π.χ. Google" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div>
+              <label>From (Start ≥)</label>
+              <input id="qFrom" type="date" />
+            </div>
+            <div>
+              <label>To (End ≤)</label>
+              <input id="qTo" type="date" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div>
+              <label>Sort</label>
+              <select id="qSort">
+                <option value="smart" selected>Smart (Done last → Start → End)</option>
+                <option value="endAsc">End date ↑</option>
+                <option value="endDesc">End date ↓</option>
+                <option value="createdDesc">Newest</option>
+                <option value="createdAsc">Oldest</option>
+              </select>
+            </div>
+            <button class="btn tight" id="btnClearFilters">Clear</button>
+          </div>
+
+          <div class="hint">“This Week / Next Week” κουμπιά πάνω από τη λίστα.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="toolbar">
+        <button class="btn tight" id="btnThisWeek">This Week</button>
+        <button class="btn tight" id="btnNextWeek">Next Week</button>
+        <button class="btn tight" id="btnClearWeek">Clear Week</button>
+        <div class="small" id="channelKpi" style="flex: 1 1 auto;"></div>
+      </div>
+
+      <div class="hd">
+        <h2>Λίστα ενεργειών</h2>
+        <div class="small">Sync live · Edit row · Details (ℹ) · Undo delete</div>
+      </div>
+      <div class="bd" style="padding:0;">
+        <div style="max-height: 520px; overflow:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:170px;">Status</th>
+                <th>Τίτλος</th>
+                <th style="width:120px;">Start</th>
+                <th style="width:120px;">End</th>
+                <th style="width:200px;">Deliverable</th>
+                <th style="width:260px;">Tags</th>
+                <th style="width:120px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-calendar" style="display:none;">
+    <div class="card">
+      <div class="hd">
+        <h2>Calendar (Start/End markers)</h2>
+        <div class="small">Μόνο αρχή/τέλος — όχι “μπάρες”</div>
+      </div>
+      <div class="bd">
+        <div class="calbar">
+          <div class="left">
+            <button class="btn tight" id="calPrev">◀</button>
+            <button class="btn tight" id="calToday">Today</button>
+            <button class="btn tight" id="calNext">▶</button>
+            <div style="min-width:200px;"><strong id="calTitle"></strong></div>
+          </div>
+          <div class="right"><div class="small">Click σε ημέρα για λεπτομέρειες</div></div>
+        </div>
+
+        <div class="calgrid" style="margin-top:12px;">
+          <div class="small" style="text-align:center;font-weight:900;">Mon</div>
+          <div class="small" style="text-align:center;font-weight:900;">Tue</div>
+          <div class="small" style="text-align:center;font-weight:900;">Wed</div>
+          <div class="small" style="text-align:center;font-weight:900;">Thu</div>
+          <div class="small" style="text-align:center;font-weight:900;">Fri</div>
+          <div class="small" style="text-align:center;font-weight:900;">Sat</div>
+          <div class="small" style="text-align:center;font-weight:900;">Sun</div>
+        </div>
+
+        <div class="calgrid" id="calGrid"></div>
+        <div class="hint">Μπλε = Start · Πράσινο = End</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-week" style="display:none;">
+    <div class="card">
+      <div class="hd">
+        <h2>Week (Markers only)</h2>
+        <div class="small">Χωρίς επικάλυψη: μόνο Start/End ανά ημέρα</div>
+      </div>
+      <div class="bd">
+        <div class="calbar">
+          <div class="left">
+            <button class="btn tight" id="wkPrev">◀</button>
+            <button class="btn tight" id="wkThis">This week</button>
+            <button class="btn tight" id="wkNext">▶</button>
+            <div style="min-width:260px;"><strong id="wkTitle"></strong></div>
+          </div>
+          <div class="right"><div class="small" id="wkCount"></div></div>
+        </div>
+
+        <div class="wkgrid" id="wkGrid"></div>
+        <div class="hint">Κλικ σε ημέρα → λίστα markers · Κλικ σε item → Details</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="modal" id="modal" style="position:fixed; inset:0; display:none; align-items:center; justify-content:center; background: rgba(0,0,0,.45); padding:14px; z-index:999;">
+  <div class="sheet" style="width:min(900px, 96vw); max-height:86vh; overflow:auto; border-radius:18px; border:1px solid var(--border); background: var(--panel); box-shadow: var(--shadow);">
+    <div class="hd" style="padding:14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <h3 id="modalTitle" style="margin:0;font-size:14px;">Details</h3>
+      <button class="btn tight" id="modalClose">Close</button>
+    </div>
+    <div class="bd" style="padding:14px;">
+      <div class="list" id="modalList" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <div class="msg" id="toastMsg"></div>
+  <button class="link" id="toastUndo">Undo</button>
+</div>
+
+<footer>© Giorgos Varvaresos</footer>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+  import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "REPLACE_ME",
+    authDomain: "REPLACE_ME",
+    projectId: "REPLACE_ME",
+    appId: "REPLACE_ME"
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  const setupBanner = $("setupBanner");
+  const signinBanner = $("signinBanner");
+  const authPill = $("authPill");
+  const btnSignIn = $("btnSignIn");
+  const btnSignIn2 = $("btnSignIn2");
+  const btnSignOut = $("btnSignOut");
+
+  const hasConfig = firebaseConfig && Object.values(firebaseConfig).every(v => v && !String(v).includes("REPLACE_ME"));
+  if(!hasConfig) setupBanner.style.display = "flex";
+
+  const app = hasConfig ? initializeApp(firebaseConfig) : null;
+  const auth = app ? getAuth(app) : null;
+  const db = app ? getFirestore(app) : null;
+  const provider = auth ? new GoogleAuthProvider() : null;
+
+  const TAG_OPTIONS = {
+    "Main Banner": "#2563eb",
+    "Bottom Banner": "#1d4ed8",
+    "NSL": "#7c3aed",
+    "Push": "#f59e0b",
+    "PopUp": "#ef4444",
+    "Viber": "#22c55e",
+    "Social Post": "#0ea5e9",
+    "Social Ads": "#0284c7",
+    "Google": "#ea4335"
+  };
+  const DELIVERABLE_OPTIONS = ["EASY","ACRO"];
+  const DELIVERABLE_COLORS = {"EASY":"#22c55e","ACRO":"#0ea5e9"};
+
+  const state = {
+    uid: null,
+    unsub: null,
+    tasks: [],
+    editingId: null,
+    view: "actions",
+    cal: { year: null, month: null },
+    weekOffset: 0,
+    weekFilter: null,
+    undo: { timer: null, task: null, index: null }
+  };
+
+  function norm(s){ return (s || "").toString().trim(); }
+  function uidLocal(){ return "t_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16); }
+  function todayISO(){
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  function addDaysISO(iso, n){
+    const [y,m,d] = iso.split("-").map(Number);
+    const dt = new Date(y, m-1, d);
+    dt.setDate(dt.getDate()+n);
+    const yyyy = dt.getFullYear();
+    const mm = String(dt.getMonth()+1).padStart(2,"0");
+    const dd = String(dt.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  function formatDate(iso){
+    if(!iso) return "";
+    const parts = iso.split("-");
+    if(parts.length !== 3) return iso;
+    const [y,m,d] = parts;
+    return `${d}-${m}-${y}`;
+  }
+  function escapeHtml(str){
+    return (str || "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  }
+  function statusClass(s){
+    if(s === "To Do") return "st-todo";
+    if(s === "In Progress") return "st-prog";
+    return "st-done";
+  }
+  function nextStatus(s){
+    if(s === "To Do") return "In Progress";
+    if(s === "In Progress") return "Done";
+    return "To Do";
+  }
+  function normalizeTask(t){
+    const next = Object.assign({}, t);
+    next.id = next.id || uidLocal();
+    next.title = (next.title || "").toString();
+    next.status = next.status || "To Do";
+    next.start = next.start || "";
+    next.end = next.end || "";
+    next.owner = (next.owner || "").toString();
+    next.tags = Array.isArray(next.tags) ? next.tags.map(String) : [];
+    next.tags = next.tags.filter(x => x in TAG_OPTIONS);
+    next.deliverable = Array.isArray(next.deliverable) ? next.deliverable.map(String) : [];
+    next.deliverable = next.deliverable.filter(x => DELIVERABLE_OPTIONS.includes(x));
+    next.desc = (next.desc || "").toString();
+    next.createdAt = next.createdAt || Date.now();
+    return next;
+  }
+
+  // Theme
+  const THEME_KEY = "actionTracker.theme";
+  const themeToggle = $("themeToggle");
+  function applyTheme(theme){
+    document.documentElement.setAttribute("data-theme", theme);
+    themeToggle.checked = (theme !== "light");
+    localStorage.setItem(THEME_KEY, theme);
+  }
+  function initTheme(){
+    const t = localStorage.getItem(THEME_KEY);
+    applyTheme(t || "dark");
+  }
+  themeToggle.addEventListener("change", ()=> applyTheme(themeToggle.checked ? "dark" : "light"));
+
+  // Tabs
+  const tabActions = $("tab-actions");
+  const tabCalendar = $("tab-calendar");
+  const tabWeek = $("tab-week");
+  const viewActions = $("view-actions");
+  const viewCalendar = $("view-calendar");
+  const viewWeek = $("view-week");
+
+  function setView(v){
+    state.view = v;
+    const isA = v === "actions", isC = v === "calendar", isW = v === "week";
+    tabActions.classList.toggle("active", isA);
+    tabCalendar.classList.toggle("active", isC);
+    tabWeek.classList.toggle("active", isW);
+    viewActions.style.display = isA ? "" : "none";
+    viewCalendar.style.display = isC ? "" : "none";
+    viewWeek.style.display = isW ? "" : "none";
+    if(isC) renderCalendar();
+    if(isW) renderWeekMarkers();
+  }
+  tabActions.addEventListener("click", ()=>setView("actions"));
+  tabCalendar.addEventListener("click", ()=>setView("calendar"));
+  tabWeek.addEventListener("click", ()=>setView("week"));
+
+  // Form
+  const fTitle = $("fTitle");
+  const fStatus = $("fStatus");
+  const fStart = $("fStart");
+  const fEnd = $("fEnd");
+  const fOwner = $("fOwner");
+  const fTags = $("fTags");
+  const fDeliverable = $("fDeliverable");
+  const fDesc = $("fDesc");
+  const btnAdd = $("btnAdd");
+  const softRuleHint = $("softRuleHint");
+
+  function getMultiValues(selectEl){ return Array.from(selectEl.selectedOptions).map(o => o.value); }
+  function setMultiValues(selectEl, values){
+    const set = new Set((values||[]).map(String));
+    Array.from(selectEl.options).forEach(opt => opt.selected = set.has(opt.value));
+  }
+  function updateSoftRuleHint(){
+    const tags = getMultiValues(fTags);
+    const dels = getMultiValues(fDeliverable);
+    if(tags.includes("Main Banner") && dels.length === 0){
+      softRuleHint.textContent = "Hint: Main Banner συνήθως απαιτεί Deliverable (EASY ή/και ACRO).";
+      softRuleHint.style.color = "var(--warn)";
+    } else softRuleHint.textContent = "";
+  }
+  fTags.addEventListener("change", updateSoftRuleHint);
+  fDeliverable.addEventListener("change", updateSoftRuleHint);
+
+  function clearForm(){
+    fTitle.value=""; fStatus.value="To Do"; fStart.value=""; fEnd.value=""; fOwner.value="";
+    setMultiValues(fTags, []); setMultiValues(fDeliverable, []); fDesc.value="";
+    softRuleHint.textContent="";
+  }
+
+  function tasksCol(){
+    return collection(db, "users", state.uid, "tasks");
+  }
+  async function createTaskCloud(t){
+    const ref = doc(tasksCol(), t.id);
+    await setDoc(ref, t, { merge: true });
+  }
+  async function patchTaskCloud(id, patch){
+    const ref = doc(tasksCol(), id);
+    await updateDoc(ref, patch);
+  }
+  async function deleteTaskCloud(id){
+    const ref = doc(tasksCol(), id);
+    await deleteDoc(ref);
+  }
+
+  function setUiEnabled(enabled){
+    const disable = !enabled;
+    [btnAdd, $("btnExport"), $("btnThisWeek"), $("btnNextWeek"), $("btnClearWeek"), $("btnClearFilters")].forEach(el=>{
+      if(!el) return;
+      el.disabled = disable;
+      el.classList.toggle("disabled", disable);
+    });
+    [fTitle,fStatus,fStart,fEnd,fOwner,fTags,fDeliverable,fDesc].forEach(el=>{ if(el) el.disabled = disable; });
+  }
+
+  async function addTask(){
+    if(!state.uid){ alert("Κάνε Sign in πρώτα."); return; }
+    const title = norm(fTitle.value);
+    if(!title){ alert("Συμπλήρωσε τίτλο."); fTitle.focus(); return; }
+
+    const t = normalizeTask({
+      id: uidLocal(),
+      title,
+      status: fStatus.value,
+      start: fStart.value || "",
+      end: fEnd.value || "",
+      owner: norm(fOwner.value),
+      tags: getMultiValues(fTags),
+      deliverable: getMultiValues(fDeliverable),
+      desc: norm(fDesc.value),
+      createdAt: Date.now()
+    });
+    if(t.start && t.end && t.end < t.start){ alert("Το End date δεν μπορεί να είναι πριν το Start date."); return; }
+
+    await createTaskCloud(t);
+    clearForm();
+  }
+  btnAdd.addEventListener("click", ()=> addTask().catch(console.error));
+  fTitle.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); addTask().catch(console.error); } });
+
+  // Filters
+  const qSearch = $("qSearch");
+  const qStatus = $("qStatus");
+  const qTag = $("qTag");
+  const qFrom = $("qFrom");
+  const qTo = $("qTo");
+  const qSort = $("qSort");
+  const btnClearFilters = $("btnClearFilters");
+
+  [qSearch,qStatus,qTag,qFrom,qTo,qSort].forEach(el => el.addEventListener("input", ()=>{ state.weekFilter=null; renderAll(); }));
+  btnClearFilters.addEventListener("click", ()=>{
+    qSearch.value=""; qStatus.value=""; qTag.value=""; qFrom.value=""; qTo.value="";
+    qSort.value="smart"; state.weekFilter=null; renderAll();
+  });
+
+  const btnThisWeek = $("btnThisWeek");
+  const btnNextWeek = $("btnNextWeek");
+  const btnClearWeek = $("btnClearWeek");
+
+  function startOfWeekISO(iso){
+    const [y,m,d] = iso.split("-").map(Number);
+    const dt = new Date(y, m-1, d);
+    const day = (dt.getDay()+6)%7;
+    dt.setDate(dt.getDate()-day);
+    const yyyy = dt.getFullYear();
+    const mm = String(dt.getMonth()+1).padStart(2,"0");
+    const dd = String(dt.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  function weekRangeFromOffset(offset){
+    const t = todayISO();
+    const wkStart = startOfWeekISO(t);
+    const start = addDaysISO(wkStart, offset*7);
+    const end = addDaysISO(start, 6);
+    return {start, end};
+  }
+  function overlapsRange(t, startIso, endIso){
+    const s = t.start || "";
+    const e = t.end || "";
+    if(s && e) return s <= endIso && e >= startIso;
+    if(s) return s >= startIso && s <= endIso;
+    if(e) return e >= startIso && e <= endIso;
+    return false;
+  }
+  btnThisWeek.addEventListener("click", ()=>{ state.weekFilter = weekRangeFromOffset(0); renderAll(); });
+  btnNextWeek.addEventListener("click", ()=>{ state.weekFilter = weekRangeFromOffset(1); renderAll(); });
+  btnClearWeek.addEventListener("click", ()=>{ state.weekFilter = null; renderAll(); });
+
+  function filteredTasks(){
+    let items = [...state.tasks];
+    const s = norm(qSearch.value).toLowerCase();
+    const st = qStatus.value;
+    const tg = norm(qTag.value).toLowerCase();
+    const from = qFrom.value;
+    const to = qTo.value;
+
+    if(st) items = items.filter(t => t.status === st);
+    if(tg) items = items.filter(t => (t.tags||[]).some(x => x.toLowerCase().includes(tg)));
+    if(from) items = items.filter(t => !t.start || t.start >= from);
+    if(to) items = items.filter(t => !t.end || t.end <= to);
+    if(state.weekFilter) items = items.filter(t => overlapsRange(t, state.weekFilter.start, state.weekFilter.end));
+    if(s){
+      items = items.filter(t => {
+        const blob = [t.title, t.desc, (t.tags||[]).join(" "), (t.deliverable||[]).join(" ")].join(" ").toLowerCase();
+        return blob.includes(s);
+      });
+    }
+
+    const sort = qSort.value;
+    items.sort((a,b)=>{
+      if(sort === "createdDesc") return (b.createdAt||0) - (a.createdAt||0);
+      if(sort === "createdAsc") return (a.createdAt||0) - (b.createdAt||0);
+      if(sort === "smart"){
+        const doneA = a.status === "Done" ? 1 : 0;
+        const doneB = b.status === "Done" ? 1 : 0;
+        if(doneA !== doneB) return doneA - doneB;
+        const sa = a.start || "9999-12-31";
+        const sb = b.start || "9999-12-31";
+        if(sa !== sb) return sa.localeCompare(sb);
+        const ea = a.end || "9999-12-31";
+        const eb = b.end || "9999-12-31";
+        return ea.localeCompare(eb);
+      }
+      const ea = a.end || "9999-12-31";
+      const eb = b.end || "9999-12-31";
+      if(sort === "endDesc") return eb.localeCompare(ea);
+      return ea.localeCompare(eb);
+    });
+    return items;
+  }
+
+  function renderChips(arr, colorMap){
+    const items = (arr || []).filter(Boolean);
+    if(!items.length) return `<span class="small">—</span>`;
+    return `<div class="chips">${
+      items.map(x=>{
+        const c = colorMap?.[x] || "#64748b";
+        return `<span class="chip" title="${escapeHtml(x)}"><span class="mini" style="background:${c}"></span>${escapeHtml(x)}</span>`;
+      }).join("")
+    }</div>`;
+  }
+
+  const kpiTotal = $("kpiTotal");
+  const kpiOpen = $("kpiOpen");
+  const kpiCritical = $("kpiCritical");
+  const channelKpi = $("channelKpi");
+
+  function isDueSoon(t){
+    if(t.status === "Done") return false;
+    if(!t.end) return false;
+    const today = todayISO();
+    const limit = addDaysISO(today, 2);
+    return t.end >= today && t.end <= limit;
+  }
+  function isCritical(t){
+    if(t.status === "Done") return false;
+    if(!t.end) return false;
+    const today = todayISO();
+    const limit = addDaysISO(today, 2);
+    return t.end <= limit;
+  }
+  function renderKpis(){
+    kpiTotal.textContent = state.tasks.length;
+    kpiOpen.textContent = state.tasks.filter(t => t.status !== "Done").length;
+    kpiCritical.textContent = state.tasks.filter(isDueSoon).length;
+
+    const counts = {};
+    state.tasks.filter(t => t.status !== "Done").forEach(t=>{
+      (t.tags||[]).forEach(tag => { counts[tag] = (counts[tag]||0)+1; });
+    });
+    const parts = Object.keys(TAG_OPTIONS).map(tag => `${tag}: ${counts[tag]||0}`);
+    channelKpi.textContent = parts.join(" · ");
+  }
+
+  const tbody = $("tbody");
+
+  function renderMultiSelectCell(id, key, options, selected){
+    const opts = options.map(o => `<option value="${escapeHtml(o)}"${(selected||[]).includes(o) ? " selected" : ""}>${escapeHtml(o)}</option>`).join("");
+    return `<td class="cell-edit"><select multiple data-k="${key}" data-id="${id}">${opts}</select></td>`;
+  }
+
+  function renderTable(){
+    const items = filteredTasks();
+    tbody.innerHTML = items.map(t => {
+      const editing = state.editingId === t.id;
+      const stClass = statusClass(t.status);
+      const due = isDueSoon(t);
+      const criticalRow = isCritical(t) ? "row-critical" : "";
+
+      const titleCell = editing
+        ? `<td class="cell-edit"><input data-k="title" data-id="${t.id}" value="${escapeHtml(t.title)}" /></td>`
+        : `<td title="Διπλό κλικ ή ℹ για περιγραφή">${escapeHtml(t.title)}${due ? ` <span class="small" style="color:var(--warn);font-weight:900;">(DUE SOON)</span>` : ""}</td>`;
+
+      const startCell = editing
+        ? `<td class="cell-edit"><input type="date" data-k="start" data-id="${t.id}" value="${escapeHtml(t.start||"")}" /></td>`
+        : `<td>${escapeHtml(formatDate(t.start) || "—")}</td>`;
+
+      const endCell = editing
+        ? `<td class="cell-edit"><input type="date" data-k="end" data-id="${t.id}" value="${escapeHtml(t.end||"")}" /></td>`
+        : `<td>${escapeHtml(formatDate(t.end) || "—")}</td>`;
+
+      const deliverableCell = editing
+        ? renderMultiSelectCell(t.id, "deliverable", DELIVERABLE_OPTIONS, t.deliverable)
+        : `<td>${renderChips(t.deliverable, DELIVERABLE_COLORS)}</td>`;
+
+      const tagsCell = editing
+        ? renderMultiSelectCell(t.id, "tags", Object.keys(TAG_OPTIONS), t.tags)
+        : `<td>${renderChips(t.tags, TAG_OPTIONS)}</td>`;
+
+      const statusCell = editing
+        ? `<td class="cell-edit">
+             <select data-k="status" data-id="${t.id}">
+               ${["To Do","In Progress","Done"].map(x => `<option ${x===t.status?"selected":""}>${x}</option>`).join("")}
+             </select>
+           </td>`
+        : `<td>
+             <span class="status ${stClass}" data-toggle-status="${t.id}" title="Click για αλλαγή status">
+               <span class="dot"></span>${escapeHtml(t.status)}
+             </span>
+           </td>`;
+
+      const actionsCell = editing
+        ? `<td>
+             <div class="row" style="gap:6px;flex-wrap:nowrap;justify-content:flex-start;">
+               <button class="iconbtn" title="Save" data-act="save" data-id="${t.id}">Save</button>
+               <button class="iconbtn danger" title="Cancel" data-act="cancel" data-id="${t.id}">Cancel</button>
+             </div>
+           </td>`
+        : `<td>
+             <div class="row" style="gap:6px;flex-wrap:nowrap;justify-content:flex-start;">
+               <button class="iconbtn" title="Edit row" data-act="edit" data-id="${t.id}">✎</button>
+               <button class="iconbtn" title="Edit description / details" data-act="details" data-id="${t.id}">ℹ</button>
+               <button class="iconbtn danger" title="Delete" data-act="del" data-id="${t.id}">🗑</button>
+             </div>
+           </td>`;
+
+      return `
+        <tr class="${criticalRow}" data-row="${t.id}">
+          ${statusCell}
+          ${titleCell}
+          ${startCell}
+          ${endCell}
+          ${deliverableCell}
+          ${tagsCell}
+          ${actionsCell}
+        </tr>
+      `;
+    }).join("");
+
+    tbody.querySelectorAll("button[data-act]").forEach(btn=>{
+      btn.addEventListener("click", (e)=>{
+        const id = e.currentTarget.getAttribute("data-id");
+        const act = e.currentTarget.getAttribute("data-act");
+        if(act === "edit") startEdit(id);
+        if(act === "cancel") cancelEdit();
+        if(act === "save") commitEdit(id).catch(console.error);
+        if(act === "del") deleteTask(id).catch(console.error);
+        if(act === "details") openDetails(id);
+      });
+    });
+
+    tbody.querySelectorAll("[data-toggle-status]").forEach(el=>{
+      el.addEventListener("click", ()=> toggleStatus(el.getAttribute("data-toggle-status")).catch(console.error));
+    });
+
+    tbody.querySelectorAll("tr").forEach(tr=>{
+      tr.addEventListener("dblclick", ()=>{
+        const id = tr.getAttribute("data-row");
+        openDetails(id);
+      });
+    });
+  }
+
+  function startEdit(id){ state.editingId = id; renderTable(); }
+  function cancelEdit(){ state.editingId = null; renderTable(); }
+
+  async function commitEdit(id){
+    if(!state.uid) return;
+    const row = tbody.querySelector(`tr[data-row="${id}"]`);
+    if(!row) return;
+
+    const patch = {};
+    row.querySelectorAll(`[data-id="${id}"][data-k]`).forEach(el=>{
+      const k = el.getAttribute("data-k");
+      if(el.tagName === "SELECT" && el.multiple) patch[k] = Array.from(el.selectedOptions).map(o=>o.value);
+      else patch[k] = el.value;
+    });
+
+    const current = state.tasks.find(x=>x.id===id);
+    const next = normalizeTask({...current, ...patch});
+    if(!norm(next.title)){ alert("Ο τίτλος δεν μπορεί να είναι κενός."); return; }
+    if(next.start && next.end && next.end < next.start){ alert("Το End date δεν μπορεί να είναι πριν το Start date."); return; }
+
+    await patchTaskCloud(id, patch);
+    state.editingId = null;
+  }
+
+  async function toggleStatus(id){
+    if(!state.uid) return;
+    const t = state.tasks.find(x=>x.id===id);
+    if(!t) return;
+    await patchTaskCloud(id, { status: nextStatus(t.status) });
+  }
+
+  const toast = $("toast");
+  const toastMsg = $("toastMsg");
+  const toastUndo = $("toastUndo");
+
+  function showToast(msg){ toastMsg.textContent = msg; toast.style.display = "flex"; }
+  function hideToast(){ toast.style.display = "none"; }
+
+  toastUndo.addEventListener("click", ()=>{
+    if(state.undo.task != null && state.undo.index != null){
+      createTaskCloud(state.undo.task).catch(console.error);
+    }
+    if(state.undo.timer) clearTimeout(state.undo.timer);
+    state.undo = { timer: null, task: null, index: null };
+    hideToast();
+  });
+
+  async function deleteTask(id){
+    if(!state.uid) return;
+    const idx = state.tasks.findIndex(x=>x.id===id);
+    const t = idx >= 0 ? state.tasks[idx] : null;
+
+    await deleteTaskCloud(id);
+
+    if(state.undo.timer) clearTimeout(state.undo.timer);
+    state.undo.task = t;
+    state.undo.index = idx;
+    showToast("Deleted 1 task");
+    state.undo.timer = setTimeout(()=>{
+      state.undo = { timer: null, task: null, index: null };
+      hideToast();
+    }, 10000);
+  }
+
+  // Modal details
+  const modal = $("modal");
+  const modalClose = $("modalClose");
+  const modalTitle = $("modalTitle");
+  const modalList = $("modalList");
+  modalClose.addEventListener("click", ()=> modal.style.display="none");
+  modal.addEventListener("click", (e)=>{ if(e.target === modal) modal.style.display="none"; });
+
+  function openDetails(id){
+    const t = state.tasks.find(x=>x.id===id);
+    if(!t) return;
+    modalTitle.textContent = "Details";
+    const stClass = statusClass(t.status);
+    modalList.innerHTML = `
+      <div class="card" style="box-shadow:none;">
+        <div class="bd">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+            <div style="flex:1 1 auto; min-width:260px;">
+              <div style="font-weight:900;font-size:14px;">${escapeHtml(t.title)}</div>
+              <div class="small" style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;">
+                <span class="status ${stClass}" style="cursor:default;"><span class="dot"></span>${escapeHtml(t.status)}</span>
+                <span><strong>Start:</strong> ${escapeHtml(formatDate(t.start) || "—")}</span>
+                <span><strong>End:</strong> ${escapeHtml(formatDate(t.end) || "—")}</span>
+              </div>
+            </div>
+            <div style="flex:0 0 auto;">
+              <button class="btn tight" id="btnQuickDone">Mark Done</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <div class="small" style="font-weight:900;margin-bottom:6px;">Deliverable</div>
+            ${renderChips(t.deliverable, DELIVERABLE_COLORS)}
+          </div>
+
+          <div style="margin-top:12px;">
+            <div class="small" style="font-weight:900;margin-bottom:6px;">Tags</div>
+            ${renderChips(t.tags, TAG_OPTIONS)}
+          </div>
+
+          <div style="margin-top:12px;">
+            <div class="small" style="font-weight:900;margin-bottom:6px;">Περιγραφή Ενέργειας (editable)</div>
+            <textarea id="descEdit" style="min-height:160px;">${escapeHtml(t.desc || "")}</textarea>
+            <div class="row" style="margin-top:10px;gap:8px;flex-wrap:nowrap;">
+              <button class="btn primary tight" id="btnSaveDesc">Save Description</button>
+              <div class="small">Αποθηκεύει άμεσα.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    const btnSave = modalList.querySelector("#btnSaveDesc");
+    const ta = modalList.querySelector("#descEdit");
+    const btnDone = modalList.querySelector("#btnQuickDone");
+
+    btnSave.addEventListener("click", ()=>{
+      patchTaskCloud(id, { desc: norm(ta.value) }).catch(console.error);
+      btnSave.textContent = "Saved";
+      setTimeout(()=> btnSave.textContent="Save Description", 800);
+    });
+    btnDone.addEventListener("click", ()=> patchTaskCloud(id, { status: "Done" }).then(()=> modal.style.display="none").catch(console.error));
+    modal.style.display = "flex";
+  }
+
+  // Export CSV
+  const btnExport = $("btnExport");
+  function csvEscape(v){
+    const s = (v ?? "").toString();
+    if(/[",\n]/.test(s)) return `"${s.replaceAll('"','""')}"`;
+    return s;
+  }
+  function exportCSV(){
+    const rows = [["id","title","status","start","end","deliverable","tags","desc","createdAt"]];
+    state.tasks.forEach(t=>{
+      rows.push([
+        t.id, t.title, t.status, t.start || "", t.end || "",
+        (t.deliverable||[]).join("|"),
+        (t.tags||[]).join("|"),
+        t.desc || "",
+        new Date(t.createdAt||Date.now()).toISOString()
+      ]);
+    });
+    const csv = rows.map(r => r.map(csvEscape).join(",")).join("\n");
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `action-tracker_${todayISO()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  btnExport.addEventListener("click", exportCSV);
+
+  // Calendar
+  const calPrev = $("calPrev");
+  const calNext = $("calNext");
+  const calTodayBtn = $("calToday");
+  const calTitle = $("calTitle");
+  const calGrid = $("calGrid");
+
+  function initCalendar(){
+    const d = new Date();
+    state.cal.year = d.getFullYear();
+    state.cal.month = d.getMonth();
+  }
+  function monthName(m){
+    return ["January","February","March","April","May","June","July","August","September","October","November","December"][m];
+  }
+
+  calPrev.addEventListener("click", ()=>{
+    state.cal.month -= 1;
+    if(state.cal.month < 0){ state.cal.month = 11; state.cal.year -= 1; }
+    renderCalendar();
+  });
+  calNext.addEventListener("click", ()=>{
+    state.cal.month += 1;
+    if(state.cal.month > 11){ state.cal.month = 0; state.cal.year += 1; }
+    renderCalendar();
+  });
+  calTodayBtn.addEventListener("click", ()=>{ initCalendar(); renderCalendar(); });
+
+  function buildMarkersMap(){
+    const markers = {};
+    state.tasks.forEach(t=>{
+      if(t.start){
+        markers[t.start] = markers[t.start] || [];
+        markers[t.start].push({type:"start", task:t});
+      }
+      if(t.end){
+        markers[t.end] = markers[t.end] || [];
+        markers[t.end].push({type:"end", task:t});
+      }
+    });
+    return markers;
+  }
+
+  function renderCalendar(){
+    const y = state.cal.year, m = state.cal.month;
+    calTitle.textContent = `${monthName(m)} ${y}`;
+
+    const first = new Date(y, m, 1);
+    const offset = (first.getDay() + 6) % 7;
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    const prevDays = new Date(y, m, 0).getDate();
+
+    const markers = buildMarkersMap();
+    const todayKey = todayISO();
+
+    const cells = [];
+    for(let i=0;i<42;i++){
+      const dayNum = i - offset + 1;
+      let cellDate, dim=false, displayDay;
+      if(dayNum < 1){ displayDay = prevDays + dayNum; cellDate = new Date(y, m-1, displayDay); dim = true; }
+      else if(dayNum > daysInMonth){ displayDay = dayNum - daysInMonth; cellDate = new Date(y, m+1, displayDay); dim = true; }
+      else { displayDay = dayNum; cellDate = new Date(y, m, displayDay); }
+
+      const yyyy = cellDate.getFullYear();
+      const mm = String(cellDate.getMonth()+1).padStart(2,"0");
+      const dd = String(cellDate.getDate()).padStart(2,"0");
+      const iso = `${yyyy}-${mm}-${dd}`;
+
+      const arr = (markers[iso] || []);
+      const shown = arr.slice(0, 4);
+      const more = arr.length - shown.length;
+
+      const marksHtml = shown.map(x=>{
+        const label = x.type === "start" ? "Start" : "End";
+        return `<div class="mark ${x.type}" title="${label}: ${escapeHtml(x.task.title)}">
+                  <span class="m"></span>
+                  <span style="overflow:hidden;text-overflow:ellipsis;">${label}: ${escapeHtml(x.task.title)}</span>
+                </div>`;
+      }).join("") + (more>0 ? `<div class="small">+${more} more</div>` : "");
+
+      const classes = ["day", dim ? "dim" : "", iso === todayKey ? "today" : ""].join(" ");
+      cells.push(`
+        <div class="${classes}" data-iso="${iso}">
+          <div class="d"><span>${displayDay}</span>${iso === todayKey ? `<span class="small" style="font-weight:900;">Today</span>` : `<span></span>`}</div>
+          <div class="marks">${marksHtml || `<span class="small">—</span>`}</div>
+        </div>
+      `);
+    }
+    calGrid.innerHTML = cells.join("");
+    calGrid.querySelectorAll(".day").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const iso = el.getAttribute("data-iso");
+        openDayMarkersModal(iso);
+      });
+    });
+  }
+
+  // Week markers only
+  const wkPrev = $("wkPrev");
+  const wkNext = $("wkNext");
+  const wkThis = $("wkThis");
+  const wkTitle = $("wkTitle");
+  const wkCount = $("wkCount");
+  const wkGrid = $("wkGrid");
+
+  wkPrev.addEventListener("click", ()=>{ state.weekOffset -= 1; renderWeekMarkers(); });
+  wkNext.addEventListener("click", ()=>{ state.weekOffset += 1; renderWeekMarkers(); });
+  wkThis.addEventListener("click", ()=>{ state.weekOffset = 0; renderWeekMarkers(); });
+
+  function renderWeekMarkers(){
+    const {start, end} = weekRangeFromOffset(state.weekOffset);
+    wkTitle.textContent = `${formatDate(start)} έως ${formatDate(end)}`;
+
+    const markers = buildMarkersMap();
+    const days = [];
+    for(let i=0;i<7;i++) days.push(addDaysISO(start, i));
+    const dayNames = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+    let markerCount = 0;
+    days.forEach(d => markerCount += (markers[d] || []).length);
+    wkCount.textContent = `${markerCount} marker(s)`;
+
+    wkGrid.innerHTML = days.map((iso, idx)=>{
+      const arr = (markers[iso] || []);
+      const shown = arr.slice(0, 5);
+      const more = arr.length - shown.length;
+
+      const marksHtml = shown.map(x=>{
+        const label = x.type === "start" ? "Start" : "End";
+        return `<div class="mark ${x.type}" data-open="${x.task.id}" title="${label}: ${escapeHtml(x.task.title)}">
+                  <span class="m"></span>
+                  <span style="overflow:hidden;text-overflow:ellipsis;">${label}: ${escapeHtml(x.task.title)}</span>
+                </div>`;
+      }).join("") + (more>0 ? `<div class="small">+${more} more</div>` : "");
+
+      return `
+        <div class="wkday" data-day="${iso}">
+          <div class="h"><span>${dayNames[idx]} ${formatDate(iso)}</span><span>${arr.length}</span></div>
+          <div class="marks">${marksHtml || `<span class="small">—</span>`}</div>
+        </div>
+      `;
+    }).join("");
+
+    wkGrid.querySelectorAll("[data-open]").forEach(el=>{
+      el.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        const id = el.getAttribute("data-open");
+        openDetails(id);
+      });
+    });
+    wkGrid.querySelectorAll(".wkday").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const iso = el.getAttribute("data-day");
+        openDayMarkersModal(iso);
+      });
+    });
+  }
+
+  function openDayMarkersModal(iso){
+    const markers = buildMarkersMap();
+    const arr = (markers[iso] || []);
+    modalTitle.textContent = `Day: ${formatDate(iso)}`;
+
+    if(!arr.length){
+      modalList.innerHTML = `<div class="small">Δεν υπάρχουν start/end markers για αυτή την ημέρα.</div>`;
+      modal.style.display = "flex";
+      return;
+    }
+
+    const starts = arr.filter(x=>x.type==="start");
+    const ends = arr.filter(x=>x.type==="end");
+
+    function renderGroup(title, items){
+      if(!items.length) return "";
+      return `
+        <div style="border:1px solid var(--border);border-radius:16px;padding:12px;background:color-mix(in srgb, var(--panel) 92%, transparent);">
+          <div style="font-weight:900;margin-bottom:10px;">${title}</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            ${items.map(x=>{
+              return `<div class="mark ${x.type}" data-open="${x.task.id}" title="Open details">
+                        <span class="m"></span>
+                        <span style="overflow:hidden;text-overflow:ellipsis;">${escapeHtml(x.task.title)}</span>
+                      </div>`;
+            }).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    modalList.innerHTML = `${renderGroup("Starts", starts)}${renderGroup("Ends", ends)}<div class="hint">Click σε item για Details.</div>`;
+    modalList.querySelectorAll("[data-open]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const id = el.getAttribute("data-open");
+        openDetails(id);
+      });
+    });
+    modal.style.display = "flex";
+  }
+
+  function renderAll(){
+    renderKpis();
+    renderTable();
+    if(state.view === "calendar") renderCalendar();
+    if(state.view === "week") renderWeekMarkers();
+  }
+
+  async function doSignIn(){
+    if(!auth){ alert("Πρώτα συμπλήρωσε firebaseConfig."); return; }
+    await signInWithPopup(auth, provider);
+  }
+  btnSignIn.addEventListener("click", ()=>doSignIn().catch(err=>alert(err?.message || "Sign-in failed")));
+  btnSignIn2.addEventListener("click", ()=>doSignIn().catch(err=>alert(err?.message || "Sign-in failed")));
+  btnSignOut.addEventListener("click", ()=>{ signOut(auth).catch(console.error); });
+
+  function setAuthUi(user){
+    if(!user){
+      authPill.textContent = "Not signed in";
+      btnSignOut.style.display = "none";
+      btnSignIn.style.display = "";
+      signinBanner.style.display = hasConfig ? "flex" : "none";
+      setUiEnabled(false);
+      return;
+    }
+    authPill.textContent = user.email ? `Signed in: ${user.email}` : `Signed in`;
+    btnSignOut.style.display = "";
+    btnSignIn.style.display = "none";
+    signinBanner.style.display = "none";
+    setUiEnabled(true);
+  }
+
+  function stopSync(){
+    if(state.unsub){
+      state.unsub();
+      state.unsub = null;
+    }
+  }
+  function startSync(){
+    stopSync();
+    const qy = query(tasksCol());
+    state.unsub = onSnapshot(qy, (snap)=>{
+      const arr = [];
+      snap.forEach(docu=>{
+        const data = docu.data();
+        arr.push(normalizeTask({ ...data, id: docu.id }));
+      });
+      state.tasks = arr;
+      renderAll();
+    }, (err)=>{
+      console.error(err);
+      alert("Firestore sync error. Έλεγξε rules/authorized domains.");
+    });
+  }
+
+  function init(){
+    initTheme();
+    initCalendar();
+    renderAll();
+    setView("actions");
+
+    if(!hasConfig){
+      setUiEnabled(false);
+      signinBanner.style.display = "none";
+      return;
+    }
+
+    onAuthStateChanged(auth, (user)=>{
+      state.uid = user?.uid || null;
+      setAuthUi(user);
+      if(!user){
+        stopSync();
+        state.tasks = [];
+        renderAll();
+      } else {
+        startSync();
+      }
+    });
+  }
+
+  init();
+</script>
+</body>
+</html>
